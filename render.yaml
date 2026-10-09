@@ -1,0 +1,66 @@
+# ============================================================
+#  render.yaml
+#  Despliegue del debate IA en Render: DOS servicios web
+#  (uno por rol) desde el MISMO repositorio.
+#
+#  - Se comunican por su URL PUBLICA (PEER_URL), que Render
+#    inyecta automaticamente tomando el RENDER_EXTERNAL_URL
+#    del otro servicio.
+#  - Ambos comparten la MISMA base de datos (MONGODB_URI).
+#  - Los secretos se marcan con sync:false y se piden al crear
+#    el Blueprint en el panel de Render.
+#
+#  Importante (plan gratis): los web services free no reciben
+#  trafico de la red privada, por eso se usa la URL publica.
+# ============================================================
+
+services:
+  # ---------------- IA 1: PREGUNTONA (inicia el debate) ----------------
+  - type: web
+    name: debate-aborto-preguntona
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22.16.0"
+      - key: ROL
+        value: preguntona
+      # URL publica del otro servicio (la respondona)
+      - key: PEER_URL
+        fromService:
+          type: web
+          name: debate-aborto-respondona
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: MONGODB_URI
+        sync: false
+      - key: GEMINI_API_KEY_PREGUNTONA
+        sync: false
+
+  # ---------------- IA 2: RESPONDONA (responde) ----------------
+  - type: web
+    name: debate-aborto-respondona
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22.16.0"
+      - key: ROL
+        value: respondona
+      # URL publica del otro servicio (la preguntona)
+      - key: PEER_URL
+        fromService:
+          type: web
+          name: debate-aborto-preguntona
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: MONGODB_URI
+        sync: false
+      - key: GEMINI_API_KEY_RESPONDONA
+        sync: false
